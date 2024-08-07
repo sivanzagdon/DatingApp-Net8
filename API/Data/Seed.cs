@@ -8,26 +8,28 @@ namespace API.Data;
 
 public class Seed
 {
-  public static async Task SeedUsers(DataContext Context)
+  public static async Task SeedUsers(DataContext context)
   {
-    if(await Context.Users.AnyAsync()) return;
 
-    var userDate= await File.ReadAllTextAsync("Data/UserSeedData.json");
-    var options= new JsonSerializerOptions{PropertyNameCaseInsensitive=true};
-    var users= JsonSerializer.Deserialize <List<AppUser>>(userDate,options); //convertion from json to AppUser- "Deserialize"
-  
-    if(users==null) return;
+    if (await context.Users.AnyAsync()) return;
 
-    foreach(var user in users)
+    var userData = await File.ReadAllTextAsync("Data/UserSeedData.json");
+    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    var users = JsonSerializer.Deserialize<List<AppUser>>(userData, options); // המרה מ-JSON ל-AppUser
+
+    if (users == null) return;
+
+    foreach (var user in users)
     {
-       using var hmac= new HMACSHA512();
-       user.UserName=user.UserName.ToLower();
-       user.PasswordHash=hmac.ComputeHash(Encoding.UTF8.GetBytes("pa$$w0rd"));
-       user.PasswordSalt=hmac.Key;
+      using var hmac = new HMACSHA512();
+      user.UserName = user.UserName.ToLower();
+      user.PasswordHash = hmac.ComputeHash(Encoding.UTF8.GetBytes("pa$$w0rd"));
+      user.PasswordSalt = hmac.Key;
 
-       Context.Users.Add(user);
+      context.Users.Add(user);
     }
 
-    await Context.SaveChangesAsync();
+    await context.SaveChangesAsync();
   }
 }
+
