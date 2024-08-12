@@ -81,8 +81,15 @@
                     </div>
                 </form>
             </tab>
+
+            <!--member is the variable defined in the parent component and sent as a parameter to the child component. -->
             <tab heading="Edit photos">
-                Edit photos will go here!
+                <app-photo-editor
+                  [member]="member" 
+                 (memberChange)="onMemberChange($event)"
+                 >
+                </app-photo-editor>
+
             </tab>
         </tabset>
     </div>
