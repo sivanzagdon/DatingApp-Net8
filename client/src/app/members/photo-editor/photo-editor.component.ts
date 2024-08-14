@@ -60,7 +60,19 @@ export class PhotoEditorComponent implements OnInit {
      const updateMember={...this.member()}; //Creates a new Member object and copies the values ​​from the existing Member object into it.
      updateMember.photos.push(photo);
      this.memberChange.emit(updateMember); //Broadcasts the change to the parent component.
-     //emit "event"
+     if(photo.isMain){
+      const user=this.accountServise.currentUser();
+        if(user){
+          user.photoUrl=photo.url;
+          this.accountServise.setCurrentUser(user)
+        }
+        updateMember.photoUrl=photo.url;
+        updateMember.photos.forEach(p=>{
+          if(p.isMain) p.isMain=false;
+          if(p.id===photo.id) p.isMain=true;
+        });
+        this.memberChange.emit(updateMember);
+     }
     }
   }
 
