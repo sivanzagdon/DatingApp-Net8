@@ -18,8 +18,11 @@ public class UsersController(IUserRepository userRepository, IMapper mapper,
                              IPhotoService photoService) : BaseApiController
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<MemberDto>>> GetUsers(){
-        var users=await userRepository.GetMembersAsync();
+    public async Task<ActionResult<IEnumerable<MemberDto>>> GetUsers([FromQuery]UserParams userParams)
+    {
+        userParams.CurrentUsername=User.GetUsername();
+        var users = await userRepository.GetMembersAsync(userParams);
+        Response.AddPaginationHeader(users);
         return Ok(users);
     }
 
@@ -28,41 +31,44 @@ public class UsersController(IUserRepository userRepository, IMapper mapper,
     {
         var user = await userRepository.GetMemberAsync(username);
 
-        if (user == null) return NotFound(); 
-        
+        if (user == null) return NotFound();
+
         return user;
     }
 
     [HttpPut]
     public async Task<ActionResult> updateUser(MemberUpdateDto memberUpdateDto)
     {
-        var user=await userRepository.GetUserByUsernameAsync(User.GetUsername());
-        if(user == null) return BadRequest("could not find user");
+        var user = await userRepository.GetUserByUsernameAsync(User.GetUsername());
+        if (user == null) return BadRequest("could not find user");
 
-        mapper.Map(memberUpdateDto,user);
+        mapper.Map(memberUpdateDto, user);
         userRepository.Update(user);
-        if(await userRepository.SaveAllAsync()) return NoContent();
+        if (await userRepository.SaveAllAsync()) return NoContent();
 
         return BadRequest("Failed to update the user");
     }
 
     [HttpPost("add-photo")]
-    public async Task<ActionResult<PhotoDto>>AddPhoto(IFormFile file)
+    public async Task<ActionResult<PhotoDto>> AddPhoto(IFormFile file)
     {
-        var user= await userRepository.GetUserByUsernameAsync(User.GetUsername());
-        if(user==null) return BadRequest("Cannot update user");
-        var result=  await photoService.AddPhotoAsync(file);
-        if(result.Error!=null) return BadRequest(result.Error.Message);
-        var photo= new Photo
+        var user = await userRepository.GetUserByUsernameAsync(User.GetUsername());
+        if (user == null) return BadRequest("Cannot update user");
+        var result = await photoService.AddPhotoAsync(file);
+        if (result.Error != null) return BadRequest(result.Error.Message);
+        var photo = new Photo
         {
-            Url=result.SecureUrl.AbsoluteUri,
-            PublicId=result.PublicId
+            Url = result.SecureUrl.AbsoluteUri,
+            PublicId = result.PublicId
         };
 
-        if(user.Photos.Count==0) photo.IsMain=true;
+        if (user.Photos.Count == 0) photo.IsMain = true;
         user.Photos.Add(photo);
-        if(await userRepository.SaveAllAsync()){return CreatedAtAction(nameof(GetUser),
-        new {username=user.UserName}, mapper.Map<PhotoDto>(photo));}
+        if (await userRepository.SaveAllAsync())
+        {
+            return CreatedAtAction(nameof(GetUser),
+        new { username = user.UserName }, mapper.Map<PhotoDto>(photo));
+        }
 
         return BadRequest("Problem adding photo");
     }
@@ -71,17 +77,17 @@ public class UsersController(IUserRepository userRepository, IMapper mapper,
 
     public async Task<ActionResult> SetMainPhoto(int photoId)
     {
-        var user= await userRepository.GetUserByUsernameAsync(User.GetUsername());
-        if(user==null) return BadRequest("could not find user");
+        var user = await userRepository.GetUserByUsernameAsync(User.GetUsername());
+        if (user == null) return BadRequest("could not find user");
 
-        var photo= user.Photos.FirstOrDefault(x=>x.Id==photoId);
-        if(photo==null || photo.IsMain) return BadRequest("cannot use this as main photo");
+        var photo = user.Photos.FirstOrDefault(x => x.Id == photoId);
+        if (photo == null || photo.IsMain) return BadRequest("cannot use this as main photo");
 
-        var currentMain=user.Photos.FirstOrDefault(x=>x.IsMain);
-        if(currentMain!=null) currentMain.IsMain=false;
-        photo.IsMain=true;
+        var currentMain = user.Photos.FirstOrDefault(x => x.IsMain);
+        if (currentMain != null) currentMain.IsMain = false;
+        photo.IsMain = true;
 
-        if(await userRepository.SaveAllAsync()) return NoContent();
+        if (await userRepository.SaveAllAsync()) return NoContent();
 
         return BadRequest("problem setting main photo");
     }
@@ -89,21 +95,21 @@ public class UsersController(IUserRepository userRepository, IMapper mapper,
     [HttpDelete("delete-photo/{photoId:int}")]
     public async Task<ActionResult> DeletePhoto(int photoId)
     {
-        var user= await userRepository.GetUserByUsernameAsync(User.GetUsername());
-        if(user==null) return BadRequest("user cannot found");
+        var user = await userRepository.GetUserByUsernameAsync(User.GetUsername());
+        if (user == null) return BadRequest("user cannot found");
 
-        var photo= user.Photos.FirstOrDefault(x=> x.Id==photoId);
-        if(photo==null || photo.IsMain) return BadRequest("this photo cannot be deleted") ;
+        var photo = user.Photos.FirstOrDefault(x => x.Id == photoId);
+        if (photo == null || photo.IsMain) return BadRequest("this photo cannot be deleted");
 
-        if(photo.PublicId!=null)
+        if (photo.PublicId != null)
         {
-            var result= await photoService.DeletePhotoAsync(photo.PublicId);
-            if(result.Error!=null) return BadRequest(result.Error.Message);
+            var result = await photoService.DeletePhotoAsync(photo.PublicId);
+            if (result.Error != null) return BadRequest(result.Error.Message);
         }
 
         user.Photos.Remove(photo);
 
-        if(await userRepository.SaveAllAsync()) return Ok();
+        if (await userRepository.SaveAllAsync()) return Ok();
         return BadRequest("problem deleting photo");
     }
 

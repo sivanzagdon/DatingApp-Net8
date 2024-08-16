@@ -25,7 +25,8 @@ public class TokenService(IConfiguration config) : ITokenService
         // Define the claims for the token, including the username
         var claims = new List<Claim>
     {
-        new(ClaimTypes.NameIdentifier, user.UserName)
+        new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new(ClaimTypes.Name, user.UserName)
     };
 
         // Create signing credentials using the security key and HMAC-SHA256 algorithm
